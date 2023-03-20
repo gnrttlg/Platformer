@@ -1,0 +1,73 @@
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y, isFacingRight, imgs_right, imgs_left, acc_multiplier=1, hp=1):
+        super().__init__()
+        colliders.append(self)
+        all_sprites.add(self)
+        damagers.append(self)
+        self.isFacingRight = isFacingRight
+        self.imgs_right = imgs_right
+        self.imgs_left = imgs_left
+        self.image = self.imgs_right[0]
+        self.rect = self.image.get_rect()
+        self.vel = vec(0, 0)
+        self.acc = vec(0, 0)
+        self.acc_multiplier = acc_multiplier
+        self.groundDetector = GroundDetector(1, 1)
+
+        self.rect.x = x
+        self.rect.y = y
+
+        self.hp = hp
+        self.current_imgs = self.imgs_right
+        self.frame = 0
+
+    def update(self):
+        self.oldY = self.rect.y
+        self.oldX = self.rect.x
+        self.move()
+        self.checkCollisions()
+        self.checkGround()
+        self.animate()
+
+    def checkGround(self):
+        if self.isFacingRight:
+            self.groundDetector.update(self.rect.right+1,self.rect.bottom+1)
+        else:
+            self.groundDetector.update(self.rect.left -2, self.rect.bottom + 1)
+        if not self.groundDetector.hascollision() and self.vel.y==0:
+            self.isFacingRight = not self.isFacingRight
+
+
+    def checkCollisions(self):
+        global P1
+        for c in colliders:
+            if c != self and self.rect.colliderect(c):
+                if self.rect.bottom > c.rect.top:
+                    self.rect.y = self.oldY
+                    self.vel.y = 0
+            if c != self and c!= P1 and self.rect.colliderect(c):
+                if self.rect.left < c.rect.right or self.rect.right > c.rect.left:
+                    self.rect.x = self.oldX
+                    self.vel.x = 0
+                    self.isFacingRight = not self.isFacingRight
+
+    def move(self):
+        self.acc = vec(0, 0.5)
+        if self.isFacingRight:
+            self.acc.x = ACC*self.acc_multiplier
+        else:
+            self.acc.x = -ACC*self.acc_multiplier
+        self.acc.x += self.vel.x * FRIC
+        self.vel += self.acc
+        self.rect.x += round(self.vel.x + 0.5 * self.acc.x)
+        self.rect.y += self.vel.y + 0.5 * self.acc.y
+
+    def animate(self):
+        if self.isFacingRight:
+            self.current_imgs = self.imgs_right
+        else:
+            self.current_imgs = self.imgs_left
+        self.frame += 0.2
+        if self.frame >= len(self.current_imgs):
+            self.frame = 0
+        self.image = self.current_imgs[int(self.frame)]
